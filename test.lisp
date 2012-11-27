@@ -8,7 +8,7 @@
 
 
 (defparameter *dat*
- (with-open-file (s "BS2.BIN"
+ (with-open-file (s "/dev/shm/o.bin"
 		    :element-type `(unsigned-byte 8))
    (let* ((n (file-length s))
 	  (a (make-array n :element-type '(unsigned-byte 8))))
@@ -52,6 +52,34 @@
 	      (format s "~2d" (aref frame j i)))
 	    (terpri s)))
 	(terpri s))))
+(defun read-pgm (filename)
+  (declare ((or pathname string) filename)
+           (values (or (simple-array (unsigned-byte 8) 2)
+                       (simple-array (unsigned-byte 16) 2)) &optional))
+  (with-open-file (s filename)
+    (unless (equal (symbol-name (read s)) "P5")
+      (error "no PGM file"))
+    (let* ((w (read s))
+           (h (read s))
+           (grays (read s))
+           (pos (file-position s)))
+      (declare ((integer 0 65535) grays w h))
+      (let* ((type (if (<= grays 255)
+                       '(unsigned-byte 8)
+                       '(unsigned-byte 16)))
+             (data (make-array (list h w)
+                               :element-type type))
+             (data-1d (make-array (* h w)
+                                  :element-type type
+                                  :displaced-to data)))
+        (with-open-file (s2 filename :element-type type)
+          (file-position s2 pos)
+          (read-sequence data-1d s2))
+        data))))
+
+#+nil
+(defparameter *text* (read-pgm "hackspace.pgm"))
+
 
 (defun write-pgm (filename img)
   (declare (simple-string filename)
@@ -100,8 +128,35 @@
 		   :element-type '(unsigned-byte 8))
   (destructuring-bind (n h w) (array-dimensions *balken*)
     (loop for k below n do
-	 (write-byte 64 s)
+	 (write-byte #x04 s)
 	 (write-byte 0 s)
 	 (loop for j below h do
 	      (loop for i below w do
 		   (write-byte (aref *balken* k j i) s))))))
+
+
+(destructuring-bind (h ww) (array-dimensions *text*)
+ (defparameter *text-scrolling*
+   (let* ((w 18)
+	  (n (* w (- ww w)))
+	  (a (make-array (list n w h) :element-type '(unsigned-byte 8))))
+     (loop for k below n do
+	  (loop for j below h do
+	       (loop for i below w do
+		    (setf (aref a k i j) (if (< (+ i k) ww) 
+					     (if (< 200 (aref *text* j (+ i k)))
+						 11 0)
+					     0)))))
+     a)))
+
+(with-open-file (s "/dev/shm/o.bin" :direction :output
+		   :if-exists :supersede
+		   :if-does-not-exist :create
+		   :element-type '(unsigned-byte 8))
+  (destructuring-bind (n h w) (array-dimensions *text-scrolling*)
+    (loop for k below n do
+	 (write-byte #x04 s)
+	 (write-byte 0 s)
+	 (loop for j below h do
+	      (loop for i below w do
+		   (write-byte (aref *text-scrolling* k j i) s))))))
