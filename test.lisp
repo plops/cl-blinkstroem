@@ -6,7 +6,7 @@
 
 (+ 2 (* 8 18))
 
-
+#+nil
 (defparameter *dat*
  (with-open-file (s "/dev/shm/o.bin"
 		    :element-type `(unsigned-byte 8))
@@ -14,7 +14,7 @@
 	  (a (make-array n :element-type '(unsigned-byte 8))))
      (read-sequence a s)
      a)))
-
+#+nil
 (defparameter *imgs*
  (let ((step (+ 2 (* 8 18))))
    (loop for i below (length *dat*) by step collect
@@ -27,7 +27,7 @@
      (loop for v in frame maximize v))
 ;; max value is 11
 
-
+#+nil
 (defparameter *vid*
  (loop for (tim img) in *imgs* collect
       (let* ((h 8)
@@ -78,7 +78,7 @@
         data))))
 
 #+nil
-(defparameter *text* (read-pgm "hackspace.pgm"))
+(defparameter *text* (read-pgm "hackspace-msg.pgm"))
 
 
 (defun write-pgm (filename img)
@@ -104,7 +104,7 @@
                       :displaced-to img)))
         (write-sequence data-1d s)))
     nil))
-
+#+nil
 (loop for k below (length *vid*) do
      (let ((frame (elt *vid* k)))
        (write-pgm (format nil "/dev/shm/f~6,'0d.pgm" k)
@@ -134,11 +134,12 @@
 	      (loop for i below w do
 		   (write-byte (aref *balken* k j i) s))))))
 
-
+(* 18 (- 514 18))
+#+nil
 (destructuring-bind (h ww) (array-dimensions *text*)
  (defparameter *text-scrolling*
    (let* ((w 18)
-	  (n (* w (- ww w)))
+	  (n ww)
 	  (a (make-array (list n w h) :element-type '(unsigned-byte 8))))
      (loop for k below n do
 	  (loop for j below h do
@@ -149,6 +150,7 @@
 					     0)))))
      a)))
 
+#+nil
 (with-open-file (s "/dev/shm/o.bin" :direction :output
 		   :if-exists :supersede
 		   :if-does-not-exist :create
